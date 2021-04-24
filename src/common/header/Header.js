@@ -83,12 +83,13 @@ class Header extends Component {
                                     startAdornment={
                                         <InputAdornment position="start">
                                             <SearchIcon />
-                                        </InputAdornment>
-                                    } /> : ''}
+                                        </InputAdornment>}
+                                        onChange={this.props.onSearch}
+                                /> : ''}
                             <div>
                                 <IconButton aria-controls="simple-menu" aria-haspopup="true"
                                     onClick={this.profileIconHandler} style={{ padding: "5px 10px" }}>
-                                    <Avatar variant="circular" alt="Profile Picture" src="" ></Avatar>
+                                    <Avatar variant="circular" alt="Profile Picture" src={this.props.profilePic} ></Avatar>
                                 </IconButton>
 
                                 <StyledMenu id="simple-menu" open={this.state.openMenu} onClose={this.closeMenu}
