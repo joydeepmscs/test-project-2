@@ -51,7 +51,7 @@ class Profile extends Component {
             numOfPosts: 0,
             followers: 300,
             following: 250,
-            name: 'Somya Chowdhary',
+            name: 'Joydeep Paul',
             modalIsopen: false,
             fullName: '',
             fullNameRequired: 'dispNone'
