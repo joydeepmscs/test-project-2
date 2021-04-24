@@ -1,0 +1,38 @@
+.info-section {
+    display: flex;
+    justify-content: center;
+    margin: 15px;
+    padding-right: 100px;
+}
+
+.avatar {
+    width: 150px;
+    height: 150px;
+}
+
+.profile-details {
+    padding-left: 50px;
+}
+
+.middle-line {
+    display: flex;
+    justify-content: space-between;
+    width: 500px;
+    margin-top: 8px;
+}
+
+.modal-heading {
+    padding-top: 10px;
+}
+
+.dispNone {
+    display: none;
+}
+
+.dispBlock {
+   display: block;
+}
+
+.required {
+    color: red;
+}

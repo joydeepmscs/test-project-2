@@ -89,16 +89,19 @@ class Header extends Component {
                                 <IconButton aria-controls="simple-menu" aria-haspopup="true"
                                     onClick={this.profileIconHandler} style={{ padding: "5px 10px" }}>
                                     <Avatar variant="circular" alt="Profile Picture" src="" ></Avatar>
-
                                 </IconButton>
 
                                 <StyledMenu id="simple-menu" open={this.state.openMenu} onClose={this.closeMenu}
                                     anchorEl={this.state.anchorEl} getContentAnchorEl={null}
                                     anchorOrigin={{ vertical: "bottom", horizontal: "right" }} keepMounted>
-                                    <StyledMenuItem onClick={this.myAccountHandler}>
-                                        <Typography>My Account</Typography>
-                                    </StyledMenuItem>
-                                    <Divider variant="middle" />
+                                    {this.props.showSearchBox ?
+                                        <StyledMenuItem onClick={this.myAccountHandler}>
+                                            <Typography>My Account</Typography>
+                                        </StyledMenuItem>
+                                        : ''}
+                                    {this.props.showSearchBox ?
+                                        <Divider variant="middle" />
+                                        : ''}
                                     <StyledMenuItem onClick={this.logoutHandler}>
                                         <Typography>Logout</Typography>
                                     </StyledMenuItem>
