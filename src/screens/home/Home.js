@@ -1,7 +1,6 @@
 import React, {Component} from 'react';
 import Header from "../../common/header/Header";
 import './Home.css'
-import {Redirect} from 'react-router-dom';
 import {
     Avatar,
     Button,
@@ -24,8 +23,7 @@ class Home extends Component {
     constructor() {
         super();
         this.state = {
-            recent_media: [],
-            filtered_media: [],
+            medias: [],
             individual_media: [],
             likes: [],
             likesCount:[],
@@ -40,28 +38,25 @@ class Home extends Component {
     }
 
     componentDidMount() {
-            this.fetchMostRecentMedia();
+            this.fetctMediaDetails();
     }
 
-    fetchMostRecentMedia = () => {
+    fetctMediaDetails = () => {
         let url = this.props.baseUrl+"me/media?fields=id,caption,media_type,media_url,username,timestamp&access_token=" + sessionStorage.getItem("access-token");
         fetch(url)
          .then(res => res.json())
         .then(
           (result) => {
             this.setState({
-              recent_media: result.data,
-              filtered_media: result.data
+              medias: result.data
             });
               let likesCount=[];
-              console.log("filtered media ", this.state.filtered_media)
-              this.state.filtered_media.map((details,index)=>{
-                  likesCount.push(7);
-                  console.log("likescount ", likesCount)
+              console.log(" media details", this.state.medias)
+              this.state.medias.map((details,index)=>{
+                  return likesCount.push(7);
               })
-              this.setState({'likesCount':likesCount});
-            console.log(this.state.filtered_media);
-            console.log(this.state.individual_media);
+              this.setState({'likesCount': likesCount});
+            console.log("likes count:" ,this.state.likesCount);
           },
           (error) => {
             this.setState({
@@ -110,21 +105,20 @@ class Home extends Component {
     onSearch = (e) => {
         this.setState({'searchText': e.target.value})
         if (this.state.searchText == null || this.state.searchText.trim() === "") {
-            this.setState({filtered_media: this.state.recent_media});
-        } else {
-            let filteredRecentMedia = this.state.recent_media.filter((element) => {
+            let filteredRecentMedia = this.state.medias.filter((element) => {
                 return element.caption.text.toUpperCase().split("\n")[0].indexOf(e.target.value.toUpperCase()) > -1
             });
-            this.setState({filtered_media: filteredRecentMedia});
+            this.setState({medias: filteredRecentMedia});
+            console.log("medias :", this.state.medias)
         }
     }
 
     render() {
-        console.log('logging while rendering',this.state.filtered_media);
+        console.log('logging while rendering',this.state.medias);
         const display= <Container className='posts-card-container'>
             <Grid container spacing={2} alignContent='center' justify='flex-start' direction='row'>
                 {
-                    (this.state.filtered_media).map((details, index) => {
+                    (this.state.medias).map((details, index) => {
                         return(
                             <Grid item xs={6} key={details.id}>
                                 <Card key={details.id + '_card'}>
