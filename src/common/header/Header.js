@@ -5,11 +5,13 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import SearchIcon from '@material-ui/icons/Search';
 import IconButton from '@material-ui/core/IconButton';
 import Avatar from '@material-ui/core/Avatar';
+import profilePic from '../../assets/IMG_1150.JPG';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
 import Typography from '@material-ui/core/Typography';
 import Divider from '@material-ui/core/Divider';
 import { withStyles } from '@material-ui/core/styles';
+//import {Redirect} from 'react-router-dom';
 
 const StyledMenu = withStyles({
     paper: {
@@ -38,7 +40,7 @@ class Header extends Component {
         super(props);
         this.state = {
             openMenu: false,
-            anchorEl: null,
+            anchorEl: null
         }
     }
 
@@ -82,13 +84,12 @@ class Header extends Component {
                                     startAdornment={
                                         <InputAdornment position="start">
                                             <SearchIcon />
-                                        </InputAdornment>}
-                                        onChange={this.props.onSearch}
-                                /> : ''}
+                                        </InputAdornment>
+                                    } onChange={this.props.searchHandler} /> : ''}
                             <div>
                                 <IconButton aria-controls="simple-menu" aria-haspopup="true"
                                     onClick={this.profileIconHandler} style={{ padding: "5px 10px" }}>
-                                    <Avatar variant="circular" alt="Profile Picture" src={this.props.profilePic} ></Avatar>
+                                    <Avatar variant="circular" alt={profilePic} src={profilePic} ></Avatar>
                                 </IconButton>
 
                                 <StyledMenu id="simple-menu" open={this.state.openMenu} onClose={this.closeMenu}

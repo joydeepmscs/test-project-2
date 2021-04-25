@@ -1,10 +1,10 @@
-import React, {Component} from 'react';
-import {Redirect} from 'react-router-dom';
+import React, { Component } from 'react';
+import { Redirect } from 'react-router-dom';
 import './Profile.css';
 import Header from '../../common/header/Header';
 import profilePic from '../../assets/IMG_1150.JPG';
 import Avatar from '@material-ui/core/Avatar';
-import {withStyles} from '@material-ui/core/styles';
+import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import Fab from '@material-ui/core/Fab';
 import EditIcon from '@material-ui/icons/Edit';
@@ -16,10 +16,10 @@ import Button from '@material-ui/core/Button';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import GridList from '@material-ui/core/GridList';
 import GridListTile from '@material-ui/core/GridListTile';
-import {Card,CardContent,CardHeader,CardMedia,Divider,TextField} from '@material-ui/core'
+import Divider from '@material-ui/core/Divider';
 import FavoriteBorderIcon from '@material-ui/icons/FavoriteBorder';
 import FavoriteIcon from '@material-ui/icons/Favorite';
-import {red} from '@material-ui/core/colors';
+import { red } from '@material-ui/core/colors';
 
 const styles = theme => ({
     avatar: {
@@ -31,50 +31,27 @@ const styles = theme => ({
     },
     modal: {
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center'
     },
-    modalContent: {
+    backDrop: {
+        background: 'rgba(255,255,255,0.5)',
+    },
+    editModalContent: {
         backgroundColor: 'white',
         width: 200,
         padding: 25,
         borderRadius: 4,
-        border: 'none'
+        border: '2px solid grey'
     },
-    root: {
+    mediaModalContent: {
         display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'space-around',
-        overflow: 'hidden',
-        backgroundColor: theme.palette.background.paper,
-    },
-    gridList: {
-        width: 600,
-        height: 450,
-    },
-    icon: {
-        color: 'rgba(255, 255, 255, 0.54)',
-    },
-    cardMedia:{
-        height:400,
-        width:500,
-        float:'left'
-    },
-    card:{
-        height:'fit-content',
-        width:'fit-conent'
-    },
-    profileMedia:{
-        display: '-webkit-box',
-        flexDirection: 'column',
-    },
-    profileMediaAvatar:{
-        float:'right'
-    },
-    profileContent:{
-        padding:25
+        justifyContent: 'space-between',
+        backgroundColor: 'white',
+        width: 800,
+        padding: 25,
+        borderRadius: 4,
+        border: '2px solid grey'
     }
 });
 
@@ -85,65 +62,77 @@ class Profile extends Component {
         this.state = {
             accessToken: sessionStorage.getItem("access-token"),
             loggedIn: sessionStorage.getItem("access-token") === null ? false : true,
+            likeCountList: JSON.parse(sessionStorage.getItem('likeCountList')),
+            commentList: JSON.parse(sessionStorage.getItem('commentList')),
             username: '',
-            media: [],
             numOfPosts: 0,
             followers: 300,
             following: 250,
             name: 'Joydeep Paul',
-            modalIsopen: false,
-            mediaModalIsOpen:false,
-            individualMedia:'',
+            editModalIsopen: false,
+            mediaModalIsopen: false,
             fullName: '',
             fullNameRequired: 'dispNone',
-            likes: [],
-            likesCount:[],
-            comments: [],
-            index:0
-
+            mediaDetailList: [],
+            likesCount: 0,
+            selecetedMedia: {},
+            selectedIndex: null,
+            selectedHashTags: null,
+            error: '',
+            comment: ''
         };
     }
 
-    componentWillMount() {
-        console.log('login',this.props.loginSuccess);
-        let url = "https://graph.instagram.com/me/media?fields=id,caption,media_url,username,timestamp&access_token=" + sessionStorage.getItem("access-token");
-        const likesCount=[]
-        fetch(url)
-            .then(res => res.json())
-            .then(
-                (result) => {
-                    console.log(result);
-                    this.setState({
-                        media: result.data,
-                        username:result.data[0].username!==undefined?result.data[0].username:'Joydeep Paul',
-                        numOfPosts:result.data.length
-                    });
-                    this.state.media.forEach((details)=>{
-                        likesCount.push(3);
-                    })
-                    this.setState({'likesCount':likesCount});
-                },
-                (error) => {
-                    this.setState({
-                        isLoaded: true,
-                        error
-                    });
-                }
-            )
-
-
+    componentDidMount() {
+        this.fectchUserName();
+        this.fetchMediaDetails();
     }
+
+     fectchUserName = () => {
+         let url = this.props.baseUrl + "me?fields=id,username&access_token=" + this.state.accessToken;
+         fetch(url)
+             .then(resp => {
+                 if (resp.status === 200) {
+                     resp.json().then(resp => {
+                         console.log(resp);
+                         this.setState({ username: resp.username })
+                     });
+                 }
+             },
+                 err => console.log(err)
+             )
+             .catch(err => console.log(err));
+     }
+
+     fetchMediaDetails = () => {
+         let url = this.props.baseUrl + "me/media?fields=id,caption,media_type,media_url,username,timestamp&access_token=" + this.state.accessToken;
+         fetch(url)
+             .then(resp => resp.json())
+             .then(
+                 (result) => {
+                     this.setState({
+                         mediaDetailList: result.data
+                     });
+                     let likesCount = [];
+                     console.log(" media details", this.state.mediaDetailList)
+                     this.state.mediaDetailList.forEach((media, index) => {
+                         likesCount.push(150 + index);
+                     })
+                     this.setState({ 'likesCount': likesCount });
+                     console.log("likes count:", this.state.likesCount);
+                 },
+                 (error) => {
+                     this.setState({ error: error });
+                 }
+            )
+     }
 
     openEditModalHandler = () => {
-        this.setState({ modalIsopen: !this.state.modalIsopen })
+        this.setState({ editModalIsopen: !this.state.editModalIsopen })
     }
 
-    closeModalHandler = () => {
-        this.setState({ modalIsopen: !this.state.modalIsopen })
-    }
-
-    closeMediaModalHandler = () => {
-        this.setState({ mediaModalIsOpen: !this.state.mediaModalIsOpen })
+    closeEditModalHandler = () => {
+        this.setState({ editModalIsopen: !this.state.editModalIsopen })
     }
 
     inputFullNameChangeHandler = (event) => {
@@ -151,7 +140,7 @@ class Profile extends Component {
     }
 
     updateHandler = () => {
-        if (this.state.fullName === "" ) {
+        if (this.state.fullName === "") {
             this.setState({ fullNameRequired: 'dispBlock' })
             return;
         } else {
@@ -159,57 +148,69 @@ class Profile extends Component {
         }
 
         this.setState({
-            modalIsopen: !this.state.modalIsopen,
+            editModalIsopen: !this.state.editModalIsopen,
             name: this.state.fullName
         })
     }
 
-    openMediaModalHandler=(details)=>{
-        console.log(details);
-        let updateIndex=0;
-        const individualMedia = this.state.media.filter((image,index)=>{
-            if(image.id==details)
-                return image;
+    openMediaModalHandler = (mediaId) => {
+        var idx = 0;
+        var media = this.state.mediaDetailList.filter((media, index) => {
+            if (media.id === mediaId) {
+                idx = index;
+                return true;
+            }
+            return false;
         })[0];
-        this.state.media.forEach((image,index)=>{
-            if(image.id==details){
-                updateIndex=index;
+        if (media.caption) {
+            var hashtags = media.caption.split(' ').filter(str => str.startsWith('#')).join(' ');
+            media.caption = media.caption.replace(/(^|\s)#[a-zA-Z0-9][^\\p{L}\\p{N}\\p{P}\\p{Z}][\w-]*\b/g, '');
+        }
+
+        this.setState({
+            mediaModalIsopen: !this.state.mediaModalIsopen,
+            selecetedMedia: media,
+            selectedIndex: idx,
+            selectedHashTags: hashtags,
+        });
+        console.log(this.state.commentList[idx].length);
+    }
+
+    closeMediaModalHandler = () => {
+        this.setState({
+            mediaModalIsopen: !this.state.mediaModalIsopen
+        })
+    }
+
+    favIconClickHandler = () => {
+        let tempLikeList = this.state.likeCountList;
+        tempLikeList.forEach((likeObj, index) => {
+            if (index === this.state.selectedIndex) {
+                likeObj.userLiked ? --likeObj.count : ++likeObj.count;
+                likeObj.count > 1 ? likeObj.str = 'likes' : likeObj.str = 'like';
+                likeObj.userLiked = !likeObj.userLiked;
+                console.log(likeObj);
             }
         });
-        this.setState({individualMedia:individualMedia,index:updateIndex});
-        this.setState({mediaModalIsOpen:!this.state.mediaModalIsOpen});
-        //   console.log('Index is',this.state.index);
+        console.log(tempLikeList);
+        this.setState({ likeCountList: tempLikeList });
     }
 
-    onFavIconClick = (index) => {
-        let currentLikes = this.state.likes;
-        currentLikes[index] = !currentLikes[index];
-        let likesCount = this.state.likesCount;
-        if(currentLikes[index]){
-            likesCount[index]=likesCount[index]+1;
-        }else{
-            likesCount[index]=likesCount[index]-1;
-        }
-        this.setState({likesCount:likesCount});
-        this.setState({likes: currentLikes});
+    inputCommentChangeHandler = (e) => {
+        this.setState({ comment: e.target.value });
     }
 
-
-    onAddComment = (index) => {
-        var textfield = document.getElementById("textfield-" + index);
-        if (textfield.value == null || textfield.value.trim() === "") {
-            return;
-        }
-        let currentComment = this.state.comments;
-        if (currentComment[index] === undefined) {
-            currentComment[index] = [textfield.value];
-        } else {
-            currentComment[index] = currentComment[index].concat([textfield.value]);
-        }
-
-        textfield.value = '';
-
-        this.setState({'comments': currentComment})
+    addCommentHandler = () => {
+        let tempList = this.state.commentList;
+        console.log(tempList);
+        let tempComments = tempList[this.state.selectedIndex];
+        tempComments.push({ commentStr: this.state.comment });
+        tempList[this.state.selectedIndex] = tempComments;
+        this.setState({ commentList: tempList, comment: '' });
+        document.getElementById('comment').value = '';
+        //sessionStorage.setItem('commentList', JSON.stringify(tempList));
+        console.log(tempList[this.state.selectedIndex]);
+        //console.log(JSON.parse(sessionStorage.getItem('commentList'))[idx]);
     }
 
     render() {
@@ -221,10 +222,10 @@ class Profile extends Component {
         const { classes } = this.props;
         return (
             <div>
-                <Header loggedIn={this.state.loggedIn} history={this.props.history} profilePic={profilePic}  />
+                <Header loggedIn={this.state.loggedIn} history={this.props.history} />
                 <div className="info-section">
                     <Avatar variant="circular" alt="Profile Picture" src={profilePic}
-                            className={classes.avatar}></Avatar>
+                        className={classes.avatar}></Avatar>
                     <div className="profile-details">
                         <div>
                             <Typography variant="h4">{this.state.username}</Typography>
@@ -250,32 +251,35 @@ class Profile extends Component {
                             <Typography variant="h6">
                                 <span>{this.state.name}</span>
                                 <Fab size="medium" color="secondary" aria-label="edit"
-                                     className={classes.editIcon} onClick={this.openEditModalHandler}>
+                                    className={classes.editIcon} onClick={this.openEditModalHandler}>
                                     <EditIcon />
                                 </Fab>
                             </Typography>
-
                         </div>
                     </div>
                 </div>
                 <div className="image-section">
-                    <div className={classes.root}>
-                        <GridList cellHeight={180} className={classes.gridList}>
-                            {this.state.media.map((image) => (
-                                <GridListTile cols={0} key={image.id}  style={{ width: '33.3%',cursor:'pointer' }} >
-                                    <img onClick={()=>this.openMediaModalHandler(image.id)} src={image.media_url} alt={image.caption} />
-                                </GridListTile>
-                            ))}
-                        </GridList>
-                    </div>
+                    <GridList cols={3} cellHeight={450} style={{cursor:"pointer"}} >
+                        {this.state.mediaDetailList.map(media => (
+                            <GridListTile onClick={() => this.openMediaModalHandler(media.id)} className="released-movie-grid-item"
+                                key={"grid_" + media.id}>
+                                <img src={media.media_url} alt={media.caption} />
+                            </GridListTile>
+                        ))}
+                    </GridList>
                 </div>
-                <Modal open={this.state.modalIsopen} onClose={this.closeModalHandler}
-                       className={classes.modal}>
-                    <div className={classes.modalContent}>
+                <Modal open={this.state.editModalIsopen} onClose={this.closeEditModalHandler}
+                    BackdropProps={{
+                        classes: {
+                            root: classes.backDrop
+                        }
+                    }}
+                    className={classes.modal}>
+                    <div className={classes.editModalContent}>
                         <FormControl className="modal-heading">
                             <Typography variant="h4">
                                 Edit
-                            </Typography>
+                        </Typography>
                         </FormControl>
                         <br />
                         <br />
@@ -294,75 +298,68 @@ class Profile extends Component {
                         </Button>
                     </div>
                 </Modal>
-                <Modal open={this.state.mediaModalIsOpen} onClose={this.closeMediaModalHandler}
-                       className={classes.modal}>
-
-                    <Card key={this.state.individualMedia.id + '_card'} className={classes.card}>
-                        <div className={classes.profileMedia}>
-                            <div>
-                                <CardMedia className={classes.cardMedia} style={{height: 0, paddingTop: '56.25%', marginBottom: 5}} image={this.state.individualMedia.media_url}/>
+                <Modal open={this.state.mediaModalIsopen} onClose={this.closeMediaModalHandler} className={classes.modal}>
+                    <div className={classes.mediaModalContent}>
+                        <div className="image-modal-left">
+                            <img src={this.state.selecetedMedia.media_url} alt={this.state.selecetedMedia.media_url}
+                                className="modal-media-img" />
+                        </div>
+                        <div className="image-modal-right">
+                            <div className="media-header">
+                                <Avatar variant="circular" alt="Profile Picture" src={profilePic}></Avatar>
+                                <Typography variant="h4" style={{ paddingLeft: '10px' }}>{this.state.selecetedMedia.username}</Typography>
                             </div>
-                            <div className={classes.profileContent}>
-                                <CardHeader
-                                    avatar={<Avatar variant="circle" src={profilePic}/>}
-                                    title={this.state.individualMedia.username}
-                                />
-                                <Divider variant="middle" className='divider'/>
-                                <CardContent>
-                                    <div
-                                        className='post-caption'>{this.state.individualMedia.caption}</div>
-
-                                    <div className='post-tags' style={{color:'blue'}}>
-                                        #fresh
-                                    </div>
-                                    <br/>
-                                    <div id='all-comments'>
-                                        {
-                                            this.state.comments[this.state.index] ?
-                                                (this.state.comments)[this.state.index].map((comment, index) => (
-                                                    <p key={index}>
-                                                        <b>{this.state.individualMedia.username}</b> : {comment}
-                                                    </p>
-                                                ))
-                                                :
-                                                <p></p>
-                                        }
-                                    </div>
-                                    <br/>
-                                    <br/>
-                                    <div className='likes'>
-                                        {
-                                            this.state.likes[this.state.index] ?
-                                                <FavoriteIcon fontSize='default' style={{color: red[500]}}
-                                                              onClick={() => this.onFavIconClick(this.state.index)}/>
-                                                :
-                                                <FavoriteBorderIcon fontSize='default'
-                                                                    onClick={() => this.onFavIconClick(this.state.index)}/>
-                                        }
-
-                                        <pre> </pre>
-                                        <Typography>
-                                            <span>{this.state.likesCount[this.state.index] + ' likes'}</span>
-                                        </Typography>
-                                    </div>
-
-                                    <div className='post-comment'>
-                                        <FormControl className='post-comment-form-control'>
-                                            <TextField id={'textfield-' + this.state.index} label="Add a comment"/>
-                                        </FormControl>
-                                        <div className='add-button'>
-                                            <FormControl>
-                                                <Button variant='contained' color='primary'
-                                                        onClick={() => this.onAddComment(this.state.index)}>ADD</Button>
-                                            </FormControl>
-                                        </div>
-                                    </div>
-                                </CardContent>
+                            <div className="media-dtl-divider">
+                                <Divider variant="fullWidth" />
+                            </div>
+                            <div className="media-caption">
+                                <Typography style={{ fontSize: '14px' }}>{this.state.selecetedMedia.caption}</Typography>
+                                <Typography style={{ fontSize: '14px', color: '#0ab7ff' }}>{this.state.selectedHashTags}</Typography>
+                            </div>
+                            <div className="modal-comment-section">
+                                {this.state.commentList[this.state.selectedIndex] && this.state.commentList[this.state.selectedIndex].length > 0 ?
+                                    (this.state.commentList[this.state.selectedIndex].map((comment, i) => (
+                                        <p key={'comment_' + this.state.selectedIndex + '_' + i} style={{ margin: '0 0 6px 0' }}>
+                                            <b>{this.state.selecetedMedia.username}:</b> {comment.commentStr}
+                                        </p>
+                                    )))
+                                    : ''}
+                            </div>
+                            <div className="modal-media-icon-section">
+                                {this.state.likeCountList[this.state.selectedIndex]
+                                    && this.state.likeCountList[this.state.selectedIndex].userLiked ?
+                                    <FavoriteIcon fontSize='default' style={{ color: red[500], fontSize: 30 }}
+                                        onClick={() => this.favIconClickHandler()} />
+                                    :
+                                    <FavoriteBorderIcon style={{ fontSize: 30 }}
+                                        onClick={() => this.favIconClickHandler()} />}
+                                {this.state.likeCountList[this.state.selectedIndex] ?
+                                    <Typography style={{ paddingLeft: 15, fontSize: 14 }}>
+                                        {this.state.likeCountList[this.state.selectedIndex].count + ' '
+                                            + this.state.likeCountList[this.state.selectedIndex].str}
+                                    </Typography>
+                                    : ''}
+                            </div>
+                            <div>
+                                <FormControl style={{ marginRight: 10 }} className='modal-comment-form-control'>
+                                    <InputLabel htmlFor='comment'>Add a comment</InputLabel>
+                                    <Input id='comment' type='text' value={this.state.comment}
+                                        onChange={this.inputCommentChangeHandler} />
+                                </FormControl>
+                                {/* <FormControl style={{ marginRight: 10 }} className='modal-comment-form-control'>
+                                    <TextField id="comment" value={this.state.comment} label="Add a comment" onChange={this.inputCommentChangeHandler} />
+                                </FormControl> */}
+                                <FormControl style={{ verticalAlign: "bottom" }}>
+                                    <Button variant='contained' color='primary'
+                                        onClick={this.addCommentHandler}>
+                                        ADD
+                                    </Button>
+                                </FormControl>
                             </div>
                         </div>
-                    </Card>
+                    </div>
                 </Modal>
-            </div>
+            </div >
         )
     }
 }

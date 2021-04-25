@@ -51,7 +51,6 @@ class Login extends Component {
                 incorrectCredential: 'dispNone'
             });
             sessionStorage.setItem('access-token', this.state.accessToken);
-            console.log(this.props);
             this.props.history.push("/home");
         } else {
             this.setState({
@@ -76,7 +75,7 @@ class Login extends Component {
                             <br />
                             <FormControl required className='login-form-control'>
                                 <InputLabel htmlFor='username'>Username</InputLabel>
-                                <Input id='username' type='text' onChange={this.inputUsernameChangeHandler} />
+                                <Input id='username' type='text' value={this.state.username} onChange={this.inputUsernameChangeHandler} />
                                 <FormHelperText className={this.state.usernameRequired}>
                                     <span className='credential-required'>required</span>
                                 </FormHelperText>
