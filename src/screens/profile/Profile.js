@@ -221,7 +221,7 @@ class Profile extends Component {
         const { classes } = this.props;
         return (
             <div>
-                <Header loggedIn={this.state.loggedIn} history={this.props.history} />
+                <Header loggedIn={this.state.loggedIn} history={this.props.history} profilePic={profilePic}  />
                 <div className="info-section">
                     <Avatar variant="circular" alt="Profile Picture" src={profilePic}
                             className={classes.avatar}></Avatar>
