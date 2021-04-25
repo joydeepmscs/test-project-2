@@ -23,8 +23,8 @@ class Home extends Component {
     constructor() {
         super();
         this.state = {
-            medias: [],
-            individual_media: [],
+            filteredMedia: null,
+            media: [],
             likes: [],
             likesCount:[],
             comments: [],
@@ -42,29 +42,30 @@ class Home extends Component {
     }
 
     fetctMediaDetails = () => {
-        let url = this.props.baseUrl+"me/media?fields=id,caption,media_type,media_url,username,timestamp&access_token=" + sessionStorage.getItem("access-token");
+        let url = this.props.baseUrl+"me/media?fields=id,caption,media_url,username,timestamp&access_token=" + sessionStorage.getItem("access-token");
+        let likesCount=[];
         fetch(url)
-         .then(res => res.json())
-        .then(
-          (result) => {
-            this.setState({
-              medias: result.data
-            });
-              let likesCount=[];
-              console.log(" media details", this.state.medias)
-              this.state.medias.map((details,index)=>{
-                  return likesCount.push(7);
-              })
-              this.setState({'likesCount': likesCount});
-            console.log("likes count:" ,this.state.likesCount);
-          },
-          (error) => {
-            this.setState({
-              isLoaded: true,
-              error
-            });
-          }
-        )
+            .then(res => res.json())
+            .then(
+                (result) => {
+                    console.log(result);
+                    this.setState({
+                        filteredMedia: result.data,
+                        media: result.data
+                    });
+                    this.state.media.map((details,index)=>{
+                        likesCount.push(3);
+                    })
+                    this.setState({'likesCount':likesCount});
+                },
+                (error) => {
+                    this.setState({
+                        isLoaded: true,
+                        error
+                    });
+                }
+            )
+
 
     }
 
@@ -105,20 +106,21 @@ class Home extends Component {
     onSearch = (e) => {
         this.setState({'searchText': e.target.value})
         if (this.state.searchText == null || this.state.searchText.trim() === "") {
-            let filteredRecentMedia = this.state.medias.filter((element) => {
-                return element.caption.text.toUpperCase().split("\n")[0].indexOf(e.target.value.toUpperCase()) > -1
+            this.setState({media: this.state.filteredMedia});
+        } else {
+            let filteredRecentMedia = this.state.filteredMedia.filter((element) => {
+                if(element.caption !== undefined)
+                    return element.caption.toUpperCase().split("\n")[0].indexOf(e.target.value.toUpperCase()) > -1
             });
-            this.setState({medias: filteredRecentMedia});
-            console.log("medias :", this.state.medias)
+            this.setState({media: filteredRecentMedia});
         }
     }
 
     render() {
-        console.log('logging while rendering',this.state.medias);
         const display= <Container className='posts-card-container'>
             <Grid container spacing={2} alignContent='center' justify='flex-start' direction='row'>
                 {
-                    (this.state.medias).map((details, index) => {
+                    (this.state.media).map((details, index) => {
                         return(
                             <Grid item xs={6} key={details.id}>
                                 <Card key={details.id + '_card'}>
@@ -188,7 +190,7 @@ class Home extends Component {
             </Grid>
         </Container>
 
-            return ( <div>
+        return ( <div>
                 <div>
                     <Header loggedIn={this.state.loggedIn} showSearchBox={true}
                             history={this.props.history} profilePic={profilePic}
