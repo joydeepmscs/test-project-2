@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
+import { Redirect } from 'react-router-dom';
 import './Home.css';
 import Header from '../../common/header/Header';
-import profilePic from '../../assets/IMG_1150.JPG';
+import profilePic from '../../assets/profilePic.jpg';
 import Grid from '@material-ui/core/Grid';
 import Card from '@material-ui/core/Card';
 import CardHeader from '@material-ui/core/CardHeader';
@@ -22,138 +23,116 @@ class Home extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            accessToken: sessionStorage.getItem("access-token"),
             loggedIn: sessionStorage.getItem("access-token") == null ? false : true,
             mediaList: [],
             filteredMediaList: [],
-            hashtags: [],
-            captions: [],
-            likeCountList: [],
-            commentList: [],
-            commentToBeAdded: [],
             searchText: ''
         }
-
     }
 
     componentDidMount() {
-        this.fetctMediaDetails();
+        if (sessionStorage.getItem("access-token")) {
+            this.fetchImageDetails();
+        }
     }
 
-     fetctMediaDetails = () => {
-         let url = this.props.baseUrl + "me/media?fields=id,caption,media_type,media_url,username,timestamp&access_token=" + this.state.accessToken;
-         fetch(url)
-             .then(resp => {
-                 if (resp.status === 200) {
+    /** Method to fetch data from instagram API */
+    fetchImageDetails = () => {
+        let that = this;
+        fetch(
+            `https://graph.instagram.com/me/media?fields=id,caption&access_token=${sessionStorage.getItem("access-token")}`
+        )
+            .then(rsp => {
+                if (rsp.status === 200) {
+                    rsp.json().then(res => {
+                        const promises = res.data.map(item =>
+                            fetch(
+                                `https://graph.instagram.com/${item.id}?fields=id,media_type,media_url,username,timestamp&access_token=${sessionStorage.getItem("access-token")}`
+                            )
+                        );
+                        Promise.all(promises)
+                            .then(responses => {
+                                return Promise.all(
+                                    responses.map(function (response) {
+                                        return response.json();
+                                    })
+                                );
+                            },
+                                err => console.log(err)
+                            )
+                            .then(function (data) {
+                                data.forEach((media, i) => {
+                                    const mediaCaption = res.data[i];
+                                    if (mediaCaption.caption) {
+                                        media.caption = mediaCaption.caption
+                                        media.hashtags = mediaCaption.caption.split(' ').filter(str => str.startsWith('#')).join(' ');
+                                        media.trimmedCaption = mediaCaption.caption.replace(/(^|\s)#[a-zA-Z0-9][^\\p{L}\\p{N}\\p{P}\\p{Z}][\w-]*\b/g, '');
+                                    } else {
+                                        media.caption = null;
+                                    }
 
-                     resp.json().then(resp => {
-                         this.setState({ mediaList: resp.data });
-                         console.log("media" + this.state.mediaList);
-                         let hashtag = [];
-                         let caption = [];
-                         let likesCount = [];
-                         let comments = [];
-                         let toAdd =[];
-                         let tempMediaList = this.state.mediaList;
-                         tempMediaList.forEach((media, index) => {
-                             console.log(media.caption);
-                             var hashtags = null;
-                             var trimmedCaption = null;
-                             if (media.caption) {
-                                 hashtags = media.caption.split(' ').filter(str => str.startsWith('#')).join(' ');
-                                 trimmedCaption = media.caption.replace(/(^|\s)#[a-zA-Z0-9][^\\p{L}\\p{N}\\p{P}\\p{Z}][\w-]*\b/g, '');
-                             }
-                             // console.log(hashtags);
-                             // console.log(trimmedCaption);
+                                    /** Adding likes and comments to each image */
+                                    const count = 0 + i;
+                                    media.likeCount = count;
+                                    media.likeStr = count > 1 ? 'likes' : 'like';
+                                    media.userLiked = false;
+                                    media.comments = [];
+                                    media.comment = '';
 
-                             hashtag.push(hashtags);
-                             caption.push(trimmedCaption);
+                                    /** Method to change date format to mm/dd/yyyy HH:MM:SS format */
+                                    const mediaDate = new Date(media.timestamp);
+                                    const formattedDt = (mediaDate.getMonth() + 1).toString().padStart(2, '0') + '/'
+                                        + mediaDate.getDate().toString().padStart(2, '0') + '/'
+                                        + mediaDate.getFullYear().toString().padStart(4, '0') + ' '
+                                        + mediaDate.getHours().toString().padStart(2, '0') + ':'
+                                        + mediaDate.getMinutes().toString().padStart(2, '0') + ':'
+                                        + mediaDate.getSeconds().toString().padStart(2, '0');
+                                    media.timestamp = formattedDt;
+                                });
+                                that.setState({ mediaList: data, filteredMediaList: data });
+                            },
+                                err => console.log(err)
+                            ).catch(err => console.log(err));
+                    });
+                }
+            },
+                err => console.log(err)
+            ).catch(err => console.log(err));
+    }
 
-                             var count = 0 + index;
-                             if (count > 1) {
-                                 likesCount.push({
-                                     count: count,
-                                     str: 'likes',
-                                     userLiked: false
-                                 });
-                             } else {
-                                 likesCount.push({
-                                     count: count,
-                                     str: 'like',
-                                     userLiked: false
-                                 });
-                             }
-
-                             var totalComments = [];
-                             comments.push(totalComments);
-
-                             toAdd.push('');
-
-                         })
-                         this.setState({
-                             mediaList: tempMediaList,
-                             filteredMediaList: tempMediaList,
-                             likeCountList: likesCount,
-                             commentList: comments,
-                             hashtags: hashtag,
-                             captions: caption,
-                             commentToBeAdded: toAdd
-                         });
-                         sessionStorage.setItem('likeCountList', JSON.stringify(likesCount));
-                         sessionStorage.setItem('commentList', JSON.stringify(comments));
-                         console.log(this.state.commentToBeAdded);
-                         console.log(toAdd);
-
-                         console.log("likes count:", this.state.likeCountList);
-                         console.log("comment list:", this.state.commentList);
-                         console.log("hastags list:", this.state.hashtags);
-                     });
-                 }
-             },
-                 err => console.log(err)
-             )
-             .catch(err => console.log(err));
-     }
-
-    favIconClickHandler = (likeIdx) => {
-        let tempLikeList = this.state.likeCountList;
-        tempLikeList.forEach((likeObj, index) => {
+    /** Handler to increase/decrease likes to an image */
+    onFavIconClick = (likeIdx) => {
+        let tempMediaList = this.state.filteredMediaList;
+        tempMediaList.forEach((mediaObj, index) => {
             if (index === likeIdx) {
-                likeObj.userLiked ? --likeObj.count : ++likeObj.count;
-                likeObj.count > 1 ? likeObj.str = 'likes' : likeObj.str = 'like';
-                likeObj.userLiked = !likeObj.userLiked;
+                mediaObj.userLiked ? --mediaObj.likeCount : ++mediaObj.likeCount;
+                mediaObj.likeCount > 1 ? mediaObj.likeStr = 'likes' : mediaObj.likeStr = 'like';
+                mediaObj.userLiked = !mediaObj.userLiked;
             }
         });
-        this.setState({ likeCountList: tempLikeList });
-        sessionStorage.setItem('likeCountList', JSON.stringify(tempLikeList));
+        this.setState({ filteredMediaList: tempMediaList });
     }
 
-    inputCommentChangeHandler = (e, idx) => {
-        let temp = this.state.commentToBeAdded;
-        temp[idx] = e.target.value;
-        this.setState({ commentToBeAdded: temp });
+    /** Handler to set comment in state variable */
+    onInputCommentChange = (e, idx) => {
+        let tempMediaList = this.state.filteredMediaList;
+        tempMediaList[idx].comment = e.target.value;
+        this.setState({ filteredMediaList: tempMediaList });
     }
 
-    addCommentHandler = (idx) => {
-        let tempList = this.state.commentList;
-        let comment = document.getElementById('comment_' + idx);
-        let tempComments = tempList[idx];
-        tempComments.push({ commentStr: comment.value });
-        tempList[idx] = tempComments;
-        let temp = this.state.commentToBeAdded;
-        console.log(temp);
-        temp[idx] = '';
-        console.log(temp); 
-        this.setState({ commentList: tempList,  commentToBeAdded: temp });
-        sessionStorage.setItem('commentList', JSON.stringify(tempList));
-        console.log(this.state.commentToBeAdded);
-        //console.log(JSON.parse(sessionStorage.getItem('commentList'))[idx]);
-        comment.value = '';
+    /** Handler to add comment to an image */
+    onAddComment = (idx) => {
+        let tempMediaList = this.state.filteredMediaList;
+        let tempComments = tempMediaList[idx].comments;
+        tempComments.push({ commentStr: tempMediaList[idx].comment });
+        tempMediaList[idx].comments = tempComments;
+        tempMediaList[idx].comment = '';
+        this.setState({ filteredMediaList: tempMediaList });
     }
 
-    searchHandler = (e) => {
+    /** Handler to search images based to the search text entered by the user*/
+    onSearch = (e) => {
         this.setState({ searchText: e.target.value }, () => {
-            console.log("entered : " + this.state.searchText);
             if (!this.state.searchText || this.state.searchText.trim() === "") {
                 this.setState({ filteredMediaList: this.state.mediaList });
             } else {
@@ -169,12 +148,36 @@ class Home extends Component {
 
     }
 
+    /**Handler to redirect to Profile Page when user clicks on My Account menu item */
+    myAccountHandler = () => {
+        var likeCountList = [];
+        var commentList = [];
+        this.state.filteredMediaList.forEach((media, i) => {
+            likeCountList.push({
+                count: media.likeCount,
+                likeStr: media.likeStr,
+                userLiked: media.userLiked
+            })
+            commentList.push(media.comments);
+        });
+        sessionStorage.setItem('likeCountList', JSON.stringify(likeCountList));
+        sessionStorage.setItem('commentList', JSON.stringify(commentList));
+        this.props.history.push('/profile');
+    }
 
     render() {
+        if (!this.state.loggedIn) {
+            return (
+                <Redirect to="/" />
+            )
+        }
         return (
             <div>
-                <Header loggedIn={this.state.loggedIn} showSearchBox={true} searchHandler={this.searchHandler}
-                    history={this.props.history} />
+                {/** Header component included here */}
+                <Header loggedIn={this.state.loggedIn} homePage={true}
+                    history={this.props.history} onSearch={this.onSearch} myAccountHandler={this.myAccountHandler} />
+
+                {/** Image Card begins here */}
                 <div className="media-container">
                     <Grid alignContent='center' container spacing={2} justify='flex-start' direction='row'>
                         {this.state.filteredMediaList.map((media, index) => (
@@ -182,10 +185,8 @@ class Home extends Component {
                                 <Card key={"card_" + media.id} style={{ padding: '0 10px' }}>
                                     <CardHeader
                                         avatar={<Avatar variant="circular" src={profilePic} />}
-                                        // titleTypographyProps={{ fontSize: '30px', fontWeight: 'bold' }}
                                         title={media.username}
-                                        // subheaderTypographyProps={mediaCardStyles.subheader}
-                                        subheader={new Date(media.timestamp).toLocaleString()} />
+                                        subheader={media.timestamp} />
                                     <CardContent>
                                         <div>
                                             <img src={media.media_url} alt={media.media_url} className="media-img" />
@@ -194,27 +195,25 @@ class Home extends Component {
                                             <Divider variant="fullWidth" />
                                         </div>
                                         <div>
-                                            <Typography style={{ fontSize: '15px' }}>{this.state.captions[index]}</Typography>
+                                            <Typography style={{ fontSize: '15px' }}>{media.trimmedCaption}</Typography>
                                             <Typography style={{ fontSize: '15px', color: '#0ab7ff' }}>
-                                                {this.state.hashtags[index]}
+                                                {media.hashtags}
                                             </Typography>
                                         </div>
                                         <div className="media-icon-section">
-                                            {this.state.likeCountList.length > 0 && this.state.likeCountList[index].userLiked ?
+                                            {media.userLiked ?
                                                 <FavoriteIcon style={{ color: red[500], fontSize: 30 }}
-                                                    onClick={() => this.favIconClickHandler(index)} />
+                                                    onClick={() => this.onFavIconClick(index)} />
                                                 :
                                                 <FavoriteBorderIcon style={{ fontSize: 30 }}
-                                                    onClick={() => this.favIconClickHandler(index)} />}
-                                            {this.state.likeCountList.length > 0 ?
-                                                <Typography style={{ paddingLeft: 15 }}>
-                                                    {this.state.likeCountList[index].count + ' ' + this.state.likeCountList[index].str}
-                                                </Typography>
-                                                : ''}
+                                                    onClick={() => this.onFavIconClick(index)} />}
+                                            <Typography style={{ paddingLeft: 15 }}>
+                                                {media.likeCount + ' ' + media.likeStr}
+                                            </Typography>
                                         </div>
                                         <div className="comment-section">
-                                            {this.state.commentList.length > 0 && this.state.commentList[index].length > 0 ?
-                                                (this.state.commentList[index].map((comment, i) => (
+                                            {media.comments.length > 0 ?
+                                                (media.comments.map((comment, i) => (
                                                     <p key={'comment_' + index + '_' + i} style={{ margin: '0 0 10px 0' }}>
                                                         <b>{media.username}:</b> {comment.commentStr}
                                                     </p>
@@ -224,13 +223,13 @@ class Home extends Component {
                                         <div>
                                             <FormControl style={{ marginRight: 10 }} className='comment-form-control'>
                                                 <InputLabel htmlFor={'comment_' + index}>Add a comment</InputLabel>
-                                                <Input id={'comment_' + index} type='input'  value=
-                                                    {this.state.commentToBeAdded && this.state.commentToBeAdded.length> 0 ? this.state.commentToBeAdded[index] : ''}
-                                                    onChange={(e) => this.inputCommentChangeHandler(e, index)} />
+                                                <Input id={'comment_' + index} type='input'
+                                                    value={media.comment ? media.comment : ''}
+                                                    onChange={(e) => this.onInputCommentChange(e, index)} />
                                             </FormControl>
                                             <FormControl style={{ verticalAlign: "bottom" }}>
                                                 <Button variant='contained' color='primary'
-                                                    onClick={() => this.addCommentHandler(index)}>
+                                                    onClick={() => this.onAddComment(index)}>
                                                     ADD
                                                 </Button>
                                             </FormControl>
@@ -241,6 +240,7 @@ class Home extends Component {
                         ))}
                     </Grid>
                 </div>
+                {/** Image Card ends here */}
             </div>
         )
     }

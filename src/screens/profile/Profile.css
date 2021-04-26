@@ -37,6 +37,17 @@
     color: red;
 }
 
+.modal > div:first-child {
+    background-color: white !important;
+    opacity: 0.7 !important;
+}
+
+.modal {
+    display: 'flex';
+    align-items: 'center';
+    justify-content: 'center';
+}
+
 .image-section {
     margin: 40px 70px;
 }

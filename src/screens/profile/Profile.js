@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import { Redirect } from 'react-router-dom';
 import './Profile.css';
+import { Redirect } from 'react-router-dom';
 import Header from '../../common/header/Header';
-import profilePic from '../../assets/IMG_1150.JPG';
+import profilePic from '../../assets/profilePic.jpg';
 import Avatar from '@material-ui/core/Avatar';
 import { withStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
@@ -29,20 +29,13 @@ const styles = theme => ({
     editIcon: {
         margin: '10px 0 0 10px',
     },
-    modal: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
-    backDrop: {
-        background: 'rgba(255,255,255,0.5)',
-    },
     editModalContent: {
         backgroundColor: 'white',
         width: 200,
         padding: 25,
         borderRadius: 4,
-        border: '2px solid grey'
+        border: '2px solid #dcd6d6',
+        outline: 0
     },
     mediaModalContent: {
         display: 'flex',
@@ -51,7 +44,8 @@ const styles = theme => ({
         width: 800,
         padding: 25,
         borderRadius: 4,
-        border: '2px solid grey'
+        border: '2px solid #dcd6d6',
+        outline: 0
     }
 });
 
@@ -64,82 +58,116 @@ class Profile extends Component {
             loggedIn: sessionStorage.getItem("access-token") === null ? false : true,
             likeCountList: JSON.parse(sessionStorage.getItem('likeCountList')),
             commentList: JSON.parse(sessionStorage.getItem('commentList')),
+            mediaList: [],
             username: '',
             numOfPosts: 0,
-            followers: 300,
-            following: 250,
+            followers: 500,
+            following: 350,
             name: 'Joydeep Paul',
             editModalIsopen: false,
             mediaModalIsopen: false,
             fullName: '',
             fullNameRequired: 'dispNone',
-            mediaDetailList: [],
-            likesCount: 0,
             selecetedMedia: {},
             selectedIndex: null,
-            selectedHashTags: null,
-            error: '',
             comment: ''
         };
     }
 
     componentDidMount() {
-        this.fectchUserName();
-        this.fetchMediaDetails();
+        if (sessionStorage.getItem("access-token")) {
+            this.fectchUserName();
+            this.fetchImageDetails();
+        }
     }
 
-     fectchUserName = () => {
-         let url = this.props.baseUrl + "me?fields=id,username&access_token=" + this.state.accessToken;
-         fetch(url)
-             .then(resp => {
-                 if (resp.status === 200) {
-                     resp.json().then(resp => {
-                         console.log(resp);
-                         this.setState({ username: resp.username })
-                     });
-                 }
-             },
-                 err => console.log(err)
-             )
-             .catch(err => console.log(err));
-     }
-
-     fetchMediaDetails = () => {
-         let url = this.props.baseUrl + "me/media?fields=id,caption,media_type,media_url,username,timestamp&access_token=" + this.state.accessToken;
-         fetch(url)
-             .then(resp => resp.json())
-             .then(
-                 (result) => {
-                     this.setState({
-                         mediaDetailList: result.data
-                     });
-                     let likesCount = [];
-                     console.log(" media details", this.state.mediaDetailList)
-                     this.state.mediaDetailList.forEach((media, index) => {
-                         likesCount.push(150 + index);
-                     })
-                     this.setState({ 'likesCount': likesCount });
-                     console.log("likes count:", this.state.likesCount);
-                 },
-                 (error) => {
-                     this.setState({ error: error });
-                 }
+    /** Method to fetch user details from instagram API */
+    fectchUserName = () => {
+        let url = this.props.baseUrl + "me?fields=id,username&access_token=" + this.state.accessToken;
+        fetch(url)
+            .then(resp => {
+                if (resp.status === 200) {
+                    resp.json().then(resp => {
+                        this.setState({ username: resp.username })
+                    });
+                }
+            },
+                err => console.log(err)
             )
-     }
+            .catch(err => console.log(err));
+    }
 
-    openEditModalHandler = () => {
+    /** Method to fetch data from instagram API */
+    fetchImageDetails = () => {
+        let that = this;
+        fetch(
+            `https://graph.instagram.com/me/media?fields=id,caption&access_token=${this.state.accessToken}`
+        )
+            .then(rsp => {
+                if (rsp.status === 200) {
+                    rsp.json().then(res => {
+                        this.setState({ numOfPosts: res.data.length });
+                        const promises = res.data.map(item =>
+                            fetch(
+                                `https://graph.instagram.com/${item.id}?fields=id,media_type,media_url,username,timestamp&access_token=${this.state.accessToken}`
+                            )
+                        );
+                        Promise.all(promises)
+                            .then(responses => {
+                                return Promise.all(
+                                    responses.map(function (response) {
+                                        return response.json();
+                                    })
+                                );
+                            },
+                                err => console.log(err)
+                            )
+                            .then(function (data) {
+                                data.forEach((media, i) => {
+                                    const mediaCaption = res.data[i];
+                                    if (mediaCaption.caption) {
+                                        media.caption = mediaCaption.caption
+                                        media.hashtags = mediaCaption.caption.split(' ').filter(str => str.startsWith('#')).join(' ');
+                                        media.trimmedCaption = mediaCaption.caption.replace(/(^|\s)#[a-zA-Z0-9][^\\p{L}\\p{N}\\p{P}\\p{Z}][\w-]*\b/g, '');
+                                    } else {
+                                        media.caption = null;
+                                    }
+                                    media.likeCount = that.state.likeCountList[i].count;
+                                    media.likeStr = that.state.likeCountList[i].likeStr;
+                                    media.userLiked = that.state.likeCountList[i].userLiked;
+                                    media.comments = that.state.commentList[i];
+                                });
+                                that.setState({ mediaList: data, filteredMediaList: data });
+                            },
+                                err => console.log(err)
+                            ).catch(err => console.log(err));
+                    });
+                }
+            },
+                err => console.log(err)
+            ).catch(err => console.log(err));
+    }
+
+    /** Handler to open Edit modal when user clicks on Edit icon */
+    onOpenEditModal = () => {
         this.setState({ editModalIsopen: !this.state.editModalIsopen })
     }
 
-    closeEditModalHandler = () => {
-        this.setState({ editModalIsopen: !this.state.editModalIsopen })
+    /** Handler to close Edit modal when user clicks on Edit icon */
+    onCloseEditModal = () => {
+        this.setState({
+            editModalIsopen: !this.state.editModalIsopen,
+            fullName: ''
+        })
     }
 
-    inputFullNameChangeHandler = (event) => {
+    /** Handler to set state variable 'fullName' on the screen*/
+    onInputFullNameChange = (event) => {
         this.setState({ fullName: event.target.value })
     }
 
-    updateHandler = () => {
+    /** Handler to set user name on the user info */
+    onUpdate = () => {
         if (this.state.fullName === "") {
             this.setState({ fullNameRequired: 'dispBlock' })
             return;
@@ -149,68 +177,68 @@ class Profile extends Component {
 
         this.setState({
             editModalIsopen: !this.state.editModalIsopen,
-            name: this.state.fullName
+            name: this.state.fullName,
+            fullName: ''
         })
     }
 
-    openMediaModalHandler = (mediaId) => {
+    /** Handler to open respective image modal when clicked on any image */
+    onOpenMediaModal = (mediaId) => {
         var idx = 0;
-        var media = this.state.mediaDetailList.filter((media, index) => {
+        var media = this.state.mediaList.filter((media, index) => {
             if (media.id === mediaId) {
                 idx = index;
                 return true;
             }
             return false;
         })[0];
-        if (media.caption) {
-            var hashtags = media.caption.split(' ').filter(str => str.startsWith('#')).join(' ');
-            media.caption = media.caption.replace(/(^|\s)#[a-zA-Z0-9][^\\p{L}\\p{N}\\p{P}\\p{Z}][\w-]*\b/g, '');
-        }
-
         this.setState({
             mediaModalIsopen: !this.state.mediaModalIsopen,
             selecetedMedia: media,
-            selectedIndex: idx,
-            selectedHashTags: hashtags,
+            selectedIndex: idx
         });
-        console.log(this.state.commentList[idx].length);
     }
-
-    closeMediaModalHandler = () => {
+    
+    /** Handler to close image modal */
+    onCloseMediaModal = () => {
         this.setState({
             mediaModalIsopen: !this.state.mediaModalIsopen
         })
     }
 
-    favIconClickHandler = () => {
-        let tempLikeList = this.state.likeCountList;
-        tempLikeList.forEach((likeObj, index) => {
-            if (index === this.state.selectedIndex) {
-                likeObj.userLiked ? --likeObj.count : ++likeObj.count;
-                likeObj.count > 1 ? likeObj.str = 'likes' : likeObj.str = 'like';
-                likeObj.userLiked = !likeObj.userLiked;
-                console.log(likeObj);
-            }
-        });
-        console.log(tempLikeList);
-        this.setState({ likeCountList: tempLikeList });
+    
+    /** Handler to increase/ decrease like counts */
+    onFavIconClick = () => {
+        let tempMediaList = this.state.mediaList;
+        tempMediaList[this.state.selectedIndex].userLiked
+            ? --tempMediaList[this.state.selectedIndex].likeCount
+            : ++tempMediaList[this.state.selectedIndex].likeCount;
+        tempMediaList[this.state.selectedIndex].likeCount > 1
+            ? tempMediaList[this.state.selectedIndex].likeStr = 'likes'
+            : tempMediaList[this.state.selectedIndex].likeStr = 'like';
+        tempMediaList[this.state.selectedIndex].userLiked = !tempMediaList[this.state.selectedIndex].userLiked;
+        this.setState({ mediaList: tempMediaList });
     }
 
-    inputCommentChangeHandler = (e) => {
+    /** Handler to set 'Comment' state variable */
+    onInputCommentChange = (e) => {
         this.setState({ comment: e.target.value });
     }
 
-    addCommentHandler = () => {
-        let tempList = this.state.commentList;
-        console.log(tempList);
-        let tempComments = tempList[this.state.selectedIndex];
-        tempComments.push({ commentStr: this.state.comment });
-        tempList[this.state.selectedIndex] = tempComments;
-        this.setState({ commentList: tempList, comment: '' });
+    /** Handler to add comment on a  image */
+    onAddComment = () => {
+        if (this.state.comment) {
+            let tempMediaList = this.state.mediaList;
+            let tempComments = tempMediaList[this.state.selectedIndex].comments;
+            tempComments.push({ commentStr: this.state.comment });
+            tempMediaList[this.state.selectedIndex].comments = tempComments;
+            tempMediaList[this.state.selectedIndex].comment = '';
+            this.setState({
+                mediaList: tempMediaList,
+                comment: ''
+            });
+        }
         document.getElementById('comment').value = '';
-        //sessionStorage.setItem('commentList', JSON.stringify(tempList));
-        console.log(tempList[this.state.selectedIndex]);
-        //console.log(JSON.parse(sessionStorage.getItem('commentList'))[idx]);
     }
 
     render() {
@@ -222,7 +250,10 @@ class Profile extends Component {
         const { classes } = this.props;
         return (
             <div>
+                {/** Header component */}
                 <Header loggedIn={this.state.loggedIn} history={this.props.history} />
+
+                {/** User Info starts  */}
                 <div className="info-section">
                     <Avatar variant="circular" alt="Profile Picture" src={profilePic}
                         className={classes.avatar}></Avatar>
@@ -251,31 +282,35 @@ class Profile extends Component {
                             <Typography variant="h6">
                                 <span>{this.state.name}</span>
                                 <Fab size="medium" color="secondary" aria-label="edit"
-                                    className={classes.editIcon} onClick={this.openEditModalHandler}>
+                                    className={classes.editIcon} onClick={this.onOpenEditModal}>
                                     <EditIcon />
                                 </Fab>
                             </Typography>
                         </div>
                     </div>
                 </div>
+                {/** User Info ends */}
+
+                {/** Image section starts */}
                 <div className="image-section">
-                    <GridList cols={3} cellHeight={450} style={{cursor:"pointer"}} >
-                        {this.state.mediaDetailList.map(media => (
-                            <GridListTile onClick={() => this.openMediaModalHandler(media.id)} className="released-movie-grid-item"
+                    <GridList cols={3} cellHeight={450}>
+                        {this.state.mediaList.map(media => (
+                            <GridListTile onClick={() => this.onOpenMediaModal(media.id)}
                                 key={"grid_" + media.id}>
-                                <img src={media.media_url} alt={media.caption} />
+                                <img src={media.media_url} alt={media.caption} style={{ cursor: 'pointer' }} />
                             </GridListTile>
                         ))}
                     </GridList>
                 </div>
-                <Modal open={this.state.editModalIsopen} onClose={this.closeEditModalHandler}
-                    BackdropProps={{
-                        classes: {
-                            root: classes.backDrop
-                        }
-                    }}
-                    className={classes.modal}>
-                    <div className={classes.editModalContent}>
+                {/** Image section ends*/}
+
+                {/** Edit Modal section begins*/}
+                <Modal open={this.state.editModalIsopen} onClose={this.onCloseEditModal}
+                    className="modal">
+                    <div className={classes.editModalContent} style={{
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)", position: 'relative'}}>
                         <FormControl className="modal-heading">
                             <Typography variant="h4">
                                 Edit
@@ -285,7 +320,7 @@ class Profile extends Component {
                         <br />
                         <FormControl required>
                             <InputLabel htmlFor='fullName'>Full Name</InputLabel>
-                            <Input id='fullName' type='text' onChange={this.inputFullNameChangeHandler} />
+                            <Input id='fullName' type='text' onChange={this.onInputFullNameChange} />
                             <FormHelperText className={this.state.fullNameRequired}>
                                 <span className='required'>required</span>
                             </FormHelperText>
@@ -293,13 +328,19 @@ class Profile extends Component {
                         <br />
                         <br />
                         <br />
-                        <Button variant='contained' color='primary' onClick={this.updateHandler}>
+                        <Button variant='contained' color='primary' onClick={this.onUpdate}>
                             UPDATE
                         </Button>
                     </div>
                 </Modal>
-                <Modal open={this.state.mediaModalIsopen} onClose={this.closeMediaModalHandler} className={classes.modal}>
-                    <div className={classes.mediaModalContent}>
+                {/** Edit Modal section ends */}
+
+                {/** Image Modal section starts */}
+                <Modal open={this.state.mediaModalIsopen} onClose={this.onCloseMediaModal} className="modal">
+                    <div className={classes.mediaModalContent} style={{
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)", position: 'relative'}}>
                         <div className="image-modal-left">
                             <img src={this.state.selecetedMedia.media_url} alt={this.state.selecetedMedia.media_url}
                                 className="modal-media-img" />
@@ -307,18 +348,24 @@ class Profile extends Component {
                         <div className="image-modal-right">
                             <div className="media-header">
                                 <Avatar variant="circular" alt="Profile Picture" src={profilePic}></Avatar>
-                                <Typography variant="h4" style={{ paddingLeft: '10px' }}>{this.state.selecetedMedia.username}</Typography>
+                                <Typography variant="h4" style={{ paddingLeft: '10px' }}>
+                                    {this.state.selecetedMedia.username}
+                                </Typography>
                             </div>
                             <div className="media-dtl-divider">
                                 <Divider variant="fullWidth" />
                             </div>
                             <div className="media-caption">
-                                <Typography style={{ fontSize: '14px' }}>{this.state.selecetedMedia.caption}</Typography>
-                                <Typography style={{ fontSize: '14px', color: '#0ab7ff' }}>{this.state.selectedHashTags}</Typography>
+                                <Typography style={{ fontSize: '14px' }}>
+                                    {this.state.selecetedMedia.trimmedCaption}
+                                </Typography>
+                                <Typography style={{ fontSize: '14px', color: '#0ab7ff' }}>
+                                    {this.state.selecetedMedia.hashtags}
+                                </Typography>
                             </div>
                             <div className="modal-comment-section">
-                                {this.state.commentList[this.state.selectedIndex] && this.state.commentList[this.state.selectedIndex].length > 0 ?
-                                    (this.state.commentList[this.state.selectedIndex].map((comment, i) => (
+                                {this.state.selecetedMedia.comments && this.state.selecetedMedia.comments.length > 0 ?
+                                    (this.state.selecetedMedia.comments.map((comment, i) => (
                                         <p key={'comment_' + this.state.selectedIndex + '_' + i} style={{ margin: '0 0 6px 0' }}>
                                             <b>{this.state.selecetedMedia.username}:</b> {comment.commentStr}
                                         </p>
@@ -326,32 +373,26 @@ class Profile extends Component {
                                     : ''}
                             </div>
                             <div className="modal-media-icon-section">
-                                {this.state.likeCountList[this.state.selectedIndex]
-                                    && this.state.likeCountList[this.state.selectedIndex].userLiked ?
+                                {this.state.selecetedMedia.userLiked ?
                                     <FavoriteIcon fontSize='default' style={{ color: red[500], fontSize: 30 }}
-                                        onClick={() => this.favIconClickHandler()} />
+                                        onClick={() => this.onFavIconClick()} />
                                     :
                                     <FavoriteBorderIcon style={{ fontSize: 30 }}
-                                        onClick={() => this.favIconClickHandler()} />}
-                                {this.state.likeCountList[this.state.selectedIndex] ?
-                                    <Typography style={{ paddingLeft: 15, fontSize: 14 }}>
-                                        {this.state.likeCountList[this.state.selectedIndex].count + ' '
-                                            + this.state.likeCountList[this.state.selectedIndex].str}
-                                    </Typography>
-                                    : ''}
+                                        onClick={() => this.onFavIconClick()} />}
+                                <Typography style={{ paddingLeft: 15, fontSize: 14 }}>
+                                    {this.state.selecetedMedia.likeCount + ' '
+                                        + this.state.selecetedMedia.likeStr}
+                                </Typography>
                             </div>
                             <div>
                                 <FormControl style={{ marginRight: 10 }} className='modal-comment-form-control'>
                                     <InputLabel htmlFor='comment'>Add a comment</InputLabel>
                                     <Input id='comment' type='text' value={this.state.comment}
-                                        onChange={this.inputCommentChangeHandler} />
+                                        onChange={this.onInputCommentChange} />
                                 </FormControl>
-                                {/* <FormControl style={{ marginRight: 10 }} className='modal-comment-form-control'>
-                                    <TextField id="comment" value={this.state.comment} label="Add a comment" onChange={this.inputCommentChangeHandler} />
-                                </FormControl> */}
                                 <FormControl style={{ verticalAlign: "bottom" }}>
                                     <Button variant='contained' color='primary'
-                                        onClick={this.addCommentHandler}>
+                                        onClick={this.onAddComment}>
                                         ADD
                                     </Button>
                                 </FormControl>
@@ -359,7 +400,9 @@ class Profile extends Component {
                         </div>
                     </div>
                 </Modal>
+                {/** Image Modal section ends */}
             </div >
+
         )
     }
 }

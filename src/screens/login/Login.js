@@ -19,34 +19,42 @@ class Login extends Component {
             password: '',
             usernameRequired: 'dispNone',
             passwordRequired: 'dispNone',
-            credentials: {
+            loginCredentials: {
                 username: 'admin',
                 password: 'admin'
             },
             incorrectCredential: 'dispNone',
-            accessToken: 'IGQVJXVDkyWEwxc09kQnlIUXd5ZATY3QkFBU1dSY3VqVjQySDFlcTh6UGNaM2hGTXRQVDhNWHRKczZAtQ1BjaTBIaWJucGZArdS16Nkg0Y0FTelR3ZAm5yanFhU29iZA2pJNjQtX1dzRkdGcEU3LUVPalJldwZDZD'
+            accessToken: 'DkyWEwxc09kQnlIUXd5ZATY3QkFBU1dSY3VqVjQySDFlcTh6UGNaM2hGTXRQVDhNWHRKczZAtQ1BjaTBIaWJucGZArdS16Nkg0Y0FTelR3ZAm5yanFhU29iZA2pJNjQtX1dzRkdGcEU3LUVPalJldwZDZD'
         };
     }
 
-    inputUsernameChangeHandler = (event) => {
+    /**Handler to set state variable 'username' as user enter values on the screen */
+    onInputUsernameChange = (event) => {
         this.setState({ username: event.target.value })
     }
 
-    inputPasswordChangeHandler = (event) => {
+    /**Handler to set state variable 'password' as user enter values on the screen */
+    onInputPasswordChange = (event) => {
         this.setState({ password: event.target.value })
     }
 
-    loginHandler = () => {
+    /**Handler to login the user if valid credential is entered
+     * else throw valid error message
+     */
+    onLogin = () => {
         this.state.username === '' ? this.setState({ usernameRequired: 'dispBlock' })
             : this.setState({ usernameRequired: 'dispNone' });
         this.state.password === '' ? this.setState({ passwordRequired: 'dispBlock' })
             : this.setState({ passwordRequired: 'dispNone' });
         if (this.state.username === "" || this.state.password === "") {
+            this.setState({
+                incorrectCredential: 'dispNone'
+            });
             return;
         }
 
-        if (this.state.username === this.state.credentials.username
-            && this.state.password === this.state.credentials.password) {
+        if (this.state.username === this.state.loginCredentials.username
+            && this.state.password === this.state.loginCredentials.password) {
             this.setState({
                 incorrectCredential: 'dispNone'
             });
@@ -62,7 +70,10 @@ class Login extends Component {
     render() {
         return (
             <div>
+                {/** Header component included here */}
                 <Header />
+
+                {/** Login Card starts */}
                 <div className="login-card-container">
                     <Card className="login-card">
                         <CardContent>
@@ -75,7 +86,7 @@ class Login extends Component {
                             <br />
                             <FormControl required className='login-form-control'>
                                 <InputLabel htmlFor='username'>Username</InputLabel>
-                                <Input id='username' type='text' value={this.state.username} onChange={this.inputUsernameChangeHandler} />
+                                <Input id='username' type='text' onChange={this.onInputUsernameChange} />
                                 <FormHelperText className={this.state.usernameRequired}>
                                     <span className='credential-required'>required</span>
                                 </FormHelperText>
@@ -84,7 +95,7 @@ class Login extends Component {
                             <br />
                             <FormControl required className='login-form-control'>
                                 <InputLabel htmlFor='password'>Password</InputLabel>
-                                <Input id='password' type='password' onChange={this.inputPasswordChangeHandler} />
+                                <Input id='password' type='password' onChange={this.onInputPasswordChange} />
                                 <FormHelperText className={this.state.passwordRequired}>
                                     <span className='credential-required'>required</span>
                                 </FormHelperText>
@@ -95,14 +106,13 @@ class Login extends Component {
                                 <span className='credential-required'>Incorrect username and/or password</span>
                             </FormHelperText>
                             <br />
-                            <FormControl>
-                                <Button variant='contained' color='primary' onClick={this.loginHandler}>
-                                    LOGIN
-                                </Button>
-                            </FormControl>
+                            <Button variant='contained' color='primary' onClick={this.onLogin}>
+                                LOGIN
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>
+                {/** Login Card ends */}
             </div>
         )
     }
